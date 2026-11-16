@@ -10,22 +10,11 @@ Refer to [NOTICE.md](./NOTICE.md) for additional information and legal notices.
 
 ## Dependencies
 
-### [oxmysql](https://github.com/overextended/oxmysql)
+### pr_bridge
 
-Doors are stored in a database for ease-of-use and to allow data to be easily cleared or shared.
+All runtime services are resolved through `pr_bridge`, including database access, callbacks, locale, notifications, input, skill checks, cache, raycasts, TextUI, and targeting.
 
-mysql-async is no longer supported.
-  - does not support error-catching (pcall)
-  - people use older versions which do not support parameters as arrays
-  - it isn't maintained and has issues that will never be resolved
-
-### [ox_lib](https://github.com/overextended/ox_lib) (v2.3.0 or higher)
-
-Used for some UI elements (i.e. notifications, progress circle, input), and cache.
-
-### [ox_target](https://github.com/overextended/ox_target) (preferred) or [qtarget](https://github.com/overextended/qtarget) (deprecated)
-
-(Optional) Used for lockpicking.
+Doors remain stored in the configured database. The concrete database and target implementations are selected by `pr_bridge`; `ox_doorlock` does not import a database driver, `ox_lib`, or a target resource directly.
 
 ## Usage
 
@@ -126,7 +115,7 @@ end)
 ### Lockpick
 
 - Difficulty
-  - Sets the skillcheck difficulty (see [docs](https://coxdocs.dev/ox_lib/Modules/Interface/Client/skillcheck)).
+  - Sets the lockpicking skill-check difficulty.
 - Area size
   - Custom difficulty area size.
 - Speed multiplier

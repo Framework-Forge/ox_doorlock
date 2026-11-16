@@ -1,3 +1,6 @@
+if DoorlockUtils then return DoorlockUtils end
+
+local cache = pr_lib.cache
 local resourcePath = GetResourcePath(cache.resource):gsub('//', '/') .. '/'
 
 local utils = {}
@@ -13,7 +16,7 @@ function utils.getFilesInDirectory(path, pattern)
 	if dir then
 		for line in dir:lines() do
 			if line:match(pattern) then
-				fileCount += 1
+				fileCount = fileCount + 1
 				files[fileCount] = line:gsub(pattern, '')
 			end
 		end
@@ -31,7 +34,7 @@ for i = 1, #frameworks do
 	local framework = frameworks[i]
 	
 	if GetResourceState(framework):find('start') then
-		require(('server.framework.%s'):format(framework:lower()))
+		pr_lib.load(('server.framework.%s'):format(framework:lower()))
 		sucess = true
 		break
 	end
@@ -41,4 +44,5 @@ if not sucess then
 	warn('no compatible framework was loaded, most features will not work')
 end
 
+DoorlockUtils = utils
 return utils

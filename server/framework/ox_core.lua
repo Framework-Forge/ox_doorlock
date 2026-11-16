@@ -1,6 +1,6 @@
-if not lib.checkDependency('ox_core', '0.21.3', true) then return end
+if not pr_lib.checkDependency('ox_core', '0.21.3', true) then return end
 
-local Ox = require '@ox_core.lib.init' --[[@as OxServer]]
+local Ox = pr_lib.load('@ox_core/lib/init') --[[@as OxServer]]
 
 GetPlayer = Ox.GetPlayer
 

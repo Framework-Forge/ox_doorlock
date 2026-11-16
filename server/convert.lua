@@ -2,11 +2,12 @@
 ---@type table?
 Config.DoorList = {}
 
-local utils = require 'server.utils'
+local Database = pr_lib.database
+local utils = pr_lib.load('server.utils')
 
 local function flattenTableToArray(tbl)
 	if type(tbl) == 'table' then
-		if table.type(tbl) == 'array' then return tbl end
+		if DoorTableType(tbl) == 'array' then return tbl end
 
 		local array = {}
 
@@ -18,7 +19,7 @@ local function flattenTableToArray(tbl)
 	end
 end
 
-MySQL.ready(function()
+Database.ready(function()
 	local files, fileCount = utils.getFilesInDirectory('convert', '%.lua')
 
 	if fileCount > 0 then
@@ -40,7 +41,7 @@ MySQL.ready(function()
 				local size = 0
 
 				for k, door in pairs(Config.DoorList) do
-					size += 1
+					size = size + 1
 					local double = door.doors
 					local qb = door.objName or (double and double[1].objName)
 
@@ -120,14 +121,14 @@ MySQL.ready(function()
 
 				print(('^3Loaded %d doors from convert/%s.lua.^0'):format(size, fileName))
 
-				if MySQL.transaction.await(queries) then
+				if Database.transaction(queries) then
 					SaveResourceFile('ox_doorlock', ('convert/%s.lua'):format(fileName),
 						'-- This file has already been converted for ox_doorlock and should be removed.\r\ndo return end\r\n\r\n' ..
 						file, -1)
 				end
 
-				table.wipe(Config.DoorList)
-				table.wipe(queries)
+				ClearDoorTable(Config.DoorList)
+				ClearDoorTable(queries)
 			end
 		end
 	end

@@ -6,14 +6,14 @@ game 'gta5'
 
 --[[ Resource Information ]] --
 name 'ox_doorlock'
-version      '1.23.0'
+version      '1.22.1'
 license 'GPL-3.0-or-later'
 author 'Overextended'
 repository 'https://github.com/overextended/ox_doorlock'
 
 --[[ Manifest ]] --
 shared_scripts {
-    '@ox_lib/init.lua',
+    '@pr_bridge/init.lua',
     'config.lua',
 }
 
@@ -22,16 +22,15 @@ client_scripts {
     'client/utils.lua',
 }
 
-server_scripts {
-    '@oxmysql/lib/MySQL.lua',
-    'server/main.lua',
-}
+server_script 'server/main.lua'
 
 ui_page 'web/build/index.html'
 
 files {
     'web/build/index.html',
     'web/build/**/*',
+    'web/build/sounds/*.wav',
+    'data/door_models.json',
     'locales/*.json',
     'audio/data/oxdoorlock_sounds.dat54.rel',
     'audio/dlc_oxdoorlock/oxdoorlock.awc',
@@ -41,11 +40,5 @@ data_file 'AUDIO_WAVEPACK' 'audio/dlc_oxdoorlock'
 data_file 'AUDIO_SOUNDDATA' 'audio/data/oxdoorlock_sounds.dat'
 
 dependencies {
-    'oxmysql',
-    'ox_lib',
-}
-
-ox_libs {
-    'locale',
-    'table',
+    'pr_bridge',
 }

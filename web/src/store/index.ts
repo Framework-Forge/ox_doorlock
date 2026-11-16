@@ -6,6 +6,7 @@ export type NumberField = number | null | undefined;
 export interface StoreState {
   id?: number;
   name: StringField;
+  doorGroup?: StringField;
   passcode: StringField;
   autolock: NumberField;
   items: { name: StringField; metadata?: StringField; remove: boolean | null }[];
@@ -22,6 +23,9 @@ export interface StoreState {
   hideUi: boolean | null;
   doors: boolean | null;
   holdOpen: boolean | null;
+  doorType?: 'normal' | 'rotate' | 'slide';
+  doorOpened?: boolean | null;
+  placeNew?: boolean | null;
 }
 
 interface StateSetters {
@@ -30,19 +34,22 @@ interface StateSetters {
   setLockSound: (value: StoreState['lockSound']) => void;
   setUnlockSound: (value: StoreState['unlockSound']) => void;
   setName: (value: StoreState['name']) => void;
+  setDoorGroup: (value: StoreState['doorGroup']) => void;
   setPasscode: (value: StoreState['passcode']) => void;
   setAutolock: (value: StoreState['autolock']) => void;
   setItems: (fn: (state: StoreState['items']) => StoreState['items']) => void;
   setCharacters: (fn: (state: StoreState['characters']) => StoreState['characters']) => void;
   setGroups: (fn: (state: StoreState['groups']) => StoreState['groups']) => void;
   setLockpickDifficulty: (fn: (state: StoreState['lockpickDifficulty']) => StoreState['lockpickDifficulty']) => void;
-  toggleCheckbox: (type: 'state' | 'doors' | 'auto' | 'lockpick' | 'hideUi' | 'holdOpen') => void;
+  toggleCheckbox: (type: 'state' | 'doors' | 'auto' | 'lockpick' | 'hideUi' | 'holdOpen' | 'doorOpened' | 'placeNew') => void;
   setMaxDistance: (value: StoreState['maxDistance']) => void;
   setDoorRate: (value: StoreState['doorRate']) => void;
+  setDoorType: (value: StoreState['doorType']) => void;
 }
 
 export const useStore = create<StoreState>(() => ({
   name: '',
+  doorGroup: '',
   passcode: '',
   autolock: 0,
   items: [{ name: '', metadata: '', remove: false }],
@@ -59,6 +66,9 @@ export const useStore = create<StoreState>(() => ({
   hideUi: false,
   doors: false,
   holdOpen: false,
+  doorType: 'normal',
+  doorOpened: false,
+  placeNew: false,
 }));
 
 export const defaultState = useStore.getState();
@@ -69,6 +79,7 @@ export const useSetters = create<StateSetters>((set: SetState<StateSetters>, get
   setLockSound: (value) => useStore.setState({ lockSound: value }),
   setUnlockSound: (value) => useStore.setState({ unlockSound: value }),
   setName: (value) => useStore.setState({ name: value }),
+  setDoorGroup: (value: StoreState['doorGroup']) => useStore.setState({ doorGroup: value }),
   setPasscode: (value: StoreState['passcode']) => useStore.setState({ passcode: value }),
   setAutolock: (value: StoreState['autolock']) => useStore.setState({ autolock: value }),
   // @ts-ignore
@@ -90,4 +101,5 @@ export const useSetters = create<StateSetters>((set: SetState<StateSetters>, get
       lockpickDifficulty: fn(difficultyFields),
     })),
   setDoorRate: (value: StoreState['doorRate']) => useStore.setState({ doorRate: value }),
+  setDoorType: (value) => useStore.setState({ doorType: value }),
 }));

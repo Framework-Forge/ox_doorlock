@@ -6,6 +6,7 @@ import { useClipboard } from '../../store/clipboard';
 import { useVisibility } from '../../store/visibility';
 import { openConfirmModal } from '@mantine/modals';
 import { useNavigate } from 'react-router-dom';
+import { normalizeDoorGroupName } from '../../utils/doorGroups';
 
 const Submit: React.FC = () => {
   const navigate = useNavigate();
@@ -15,9 +16,14 @@ const Submit: React.FC = () => {
   const handleSubmit = () => {
     const data = { ...useStore.getState() };
     if (data.name === '') data.name = null;
+    data.doorGroup = normalizeDoorGroupName(data.doorGroup) || null;
     if (data.passcode === '') data.passcode = null;
     if (data.lockSound === '') data.lockSound = null;
     if (data.unlockSound === '') data.unlockSound = null;
+
+    data.doorType = data.doorType || 'normal';
+    data.doorOpened = data.doorType !== 'normal' && !!data.doorOpened;
+    data.placeNew = data.doorType !== 'normal' && !!data.placeNew;
 
     data.autolock = data.autolock || null;
     data.maxDistance = data.maxDistance || 2;
@@ -101,6 +107,7 @@ const Submit: React.FC = () => {
             useStore.setState(
               {
                 name: '',
+                doorGroup: clipboard.doorGroup || '',
                 passcode: clipboard.passcode,
                 autolock: clipboard.autolock,
                 items: clipboard.items,
@@ -116,7 +123,10 @@ const Submit: React.FC = () => {
                 hideUi: clipboard.hideUi,
                 doors: clipboard.doors,
                 lockpickDifficulty: clipboard.lockpickDifficulty,
-                holdOpen: clipboard.holdOpen
+                holdOpen: clipboard.holdOpen,
+                doorType: clipboard.doorType || 'normal',
+                doorOpened: clipboard.doorOpened || false,
+                placeNew: clipboard.placeNew || false
               },
               true
             );

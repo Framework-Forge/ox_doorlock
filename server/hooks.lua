@@ -1,3 +1,4 @@
+local cache = pr_lib.cache
 local eventHooks = {}
 local hookId = 0
 
@@ -15,7 +16,7 @@ function TriggerEventHooks(event, payload)
         end
 
         if callback.print then
-            lib.print.info(('Triggering event hook "%s:%s:%s".'):format(callback.resource, event, i))
+            pr_lib.print.info(('Triggering event hook "%s:%s:%s".'):format(callback.resource, event, i))
         end
         
         local start = os.microtime()

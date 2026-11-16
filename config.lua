@@ -2,6 +2,33 @@
 ---@diagnostic disable-next-line: missing-fields
 Config = {}
 
+-- Keep the original locale(...) contract while resolving translations through pr_bridge.
+local doorLocale = pr_lib.locale()
+
+function locale(key, ...)
+    return doorLocale(key, ...)
+end
+
+-- Replacements for the table helpers previously injected by ox_lib.
+function DoorTableType(value)
+    if type(value) ~= 'table' then return type(value) end
+
+    local count, highest = 0, 0
+
+    for key in pairs(value) do
+        if type(key) ~= 'number' or key < 1 or key % 1 ~= 0 then return 'hash' end
+        count = count + 1
+        if key > highest then highest = key end
+    end
+
+    return highest == count and 'array' or 'hash'
+end
+
+function ClearDoorTable(value)
+    for key in pairs(value) do value[key] = nil end
+    return value
+end
+
 ---Trigger a notification on the client when the door state is successfully updated.
 Config.Notify = false
 

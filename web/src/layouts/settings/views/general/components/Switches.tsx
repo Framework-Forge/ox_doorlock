@@ -10,6 +10,9 @@ const Switches: React.FC = () => {
   const lockpick = useStore((state) => state.lockpick);
   const hideUi = useStore((state) => state.hideUi);
   const holdOpen = useStore((state) => state.holdOpen);
+  const doorType = useStore((state) => state.doorType);
+  const doorOpened = useStore((state) => state.doorOpened);
+  const placeNew = useStore((state) => state.placeNew);
 
   const toggleCheckbox = useSetters((setter) => setter.toggleCheckbox);
 
@@ -52,6 +55,22 @@ const Switches: React.FC = () => {
           value={holdOpen || false}
           toggle={() => toggleCheckbox('holdOpen')}
         />
+        {doorType !== 'normal' && (
+          <>
+            <TooltipSwitch
+              label="Door Opened"
+              infoCircle="Enable when the selected door is already open. The next step will capture its closed position."
+              value={doorOpened || false}
+              toggle={() => toggleCheckbox('doorOpened')}
+            />
+            <TooltipSwitch
+              label="Place New Door"
+              infoCircle="Creates a new door where there is no map door. After confirming, choose its model with Page Up/Page Down."
+              value={placeNew || false}
+              toggle={() => toggleCheckbox('placeNew')}
+            />
+          </>
+        )}
       </SimpleGrid>
     </>
   );

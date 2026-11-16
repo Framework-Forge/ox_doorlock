@@ -1,4 +1,4 @@
-import { ActionIcon, Menu, Text, Tooltip } from '@mantine/core';
+import { ActionIcon, Menu, Text } from '@mantine/core';
 import { TbDots, TbSettings, TbTrash } from 'react-icons/tb';
 import { HiOutlineClipboardCopy } from 'react-icons/hi';
 import { GiTeleport } from 'react-icons/gi';
@@ -17,13 +17,17 @@ const ActionsMenu: React.FC<{ data: CellContext<DoorColumn, unknown> }> = ({ dat
   const setClipboard = useClipboard((state) => state.setClipboard);
   const setVisible = useVisibility((state) => state.setVisible);
   return (
-    <Menu position="right-start" width={200}>
+    <Menu position="bottom-end" width={200} withinPortal zIndex={1100}>
       <Menu.Target>
-        <Tooltip label="Door actions">
-          <ActionIcon color="blue.4" variant="transparent">
-            <TbDots size={24} />
-          </ActionIcon>
-        </Tooltip>
+        <ActionIcon
+          color="blue.4"
+          variant="transparent"
+          aria-label="Ações da porta"
+          title="Ações da porta"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <TbDots size={24} />
+        </ActionIcon>
       </Menu.Target>
 
       <Menu.Dropdown>

@@ -46,7 +46,7 @@ function IsPlayerInGroup(player, filter)
             return player.job.name, player.job.grade
         end
     else
-        local tabletype = table.type(filter)
+        local tabletype = DoorTableType(filter)
 
         if tabletype == 'hash' then
             local grade = filter[player.job.name]

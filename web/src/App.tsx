@@ -20,10 +20,13 @@ const useStyles = createStyles((theme) => ({
   },
 
   main: {
-    width: 700,
-    height: 500,
-    backgroundColor: theme.colors.dark[8],
-    borderRadius: theme.radius.sm,
+    width: 'min(900px, calc(100vw - 32px))',
+    height: 'min(720px, calc(100vh - 32px))',
+    background: 'linear-gradient(155deg, rgba(25, 28, 34, 0.98) 0%, rgba(12, 14, 18, 0.98) 72%)',
+    border: '1px solid rgba(89, 166, 255, 0.18)',
+    borderRadius: theme.radius.lg,
+    boxShadow: '0 28px 80px rgba(0, 0, 0, 0.58), 0 0 40px rgba(34, 139, 230, 0.08)',
+    overflow: 'hidden',
   },
 
   search: {
@@ -44,7 +47,7 @@ const App: React.FC = () => {
   const navigate = useNavigate();
 
   useNuiEvent('playSound', async (data: { sound: string; volume: number }) => {
-    const sound = new Audio(`./sounds/${data.sound}.ogg`);
+    const sound = new Audio(`./sounds/${data.sound}.wav`);
     sound.volume = data.volume;
     await sound.play();
   });

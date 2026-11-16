@@ -1,16 +1,15 @@
+local cache = pr_lib.cache
+local Database = pr_lib.database
+
 if not LoadResourceFile(cache.resource, 'web/build/index.html') then
     error(
         'Unable to load UI. Build ox_doorlock or download the latest release.\n	^3https://github.com/overextended/ox_doorlock/releases/latest/download/ox_doorlock.zip^0')
 end
 
-if not lib.checkDependency('oxmysql', '2.4.0') then return end
-if not lib.checkDependency('ox_lib', '3.30.4') then return end
+pr_lib.load('server.convert')
 
-lib.versionCheck('overextended/ox_doorlock')
-require 'server.convert'
-
-local utils = require 'server.utils'
-local TriggerEventHooks = require 'server.hooks'
+local utils = pr_lib.load('server.utils')
+local TriggerEventHooks = pr_lib.load('server.hooks')
 local doors = {}
 
 local function encodeData(door)
@@ -25,11 +24,17 @@ local function encodeData(door)
                 coords = double[1].coords,
                 heading = double[1].heading,
                 model = double[1].model,
+                rotation = double[1].rotation,
+                closed = double[1].closed,
+                open = double[1].open,
             },
             {
                 coords = double[2].coords,
                 heading = double[2].heading,
                 model = double[2].model,
+                rotation = double[2].rotation,
+                closed = double[2].closed,
+                open = double[2].open,
             },
         },
         characters = door.characters,
@@ -43,10 +48,25 @@ local function encodeData(door)
         maxDistance = door.maxDistance,
         doorRate = door.doorRate,
         model = door.model,
+        rotation = door.rotation,
         state = door.state,
         unlockSound = door.unlockSound,
         passcode = door.passcode,
-        lockpickDifficulty = door.lockpickDifficulty
+        lockpickDifficulty = door.lockpickDifficulty,
+        doorGroup = door.doorGroup,
+        doorType = door.doorType,
+        doorOpened = door.doorOpened,
+        closed = door.closed,
+        open = door.open,
+        -- Keep old custom settings while existing doors are gradually migrated
+        -- through the new visual creator.
+        openSpeed = door.openSpeed,
+        closeSpeed = door.closeSpeed,
+        openAngle = door.openAngle,
+        slideDirection = door.slideDirection,
+        slideDistance = door.slideDistance,
+        closedHeading = door.closedHeading,
+        openHeading = door.openHeading,
     })
 end
 
@@ -103,23 +123,147 @@ exports('editDoor', function(id, data)
             end
         end
 
-        MySQL.update('UPDATE ox_doorlock SET name = ?, data = ? WHERE id = ?', { door.name, encodeData(door), id })
+        Database.update('UPDATE ox_doorlock SET name = ?, data = ? WHERE id = ?', { door.name, encodeData(door), id })
         TriggerClientEvent('ox_doorlock:editDoorlock', -1, id, door)
     end
 end)
 
 local soundDirectory = Config.NativeAudio and 'audio/dlc_oxdoorlock/oxdoorlock' or 'web/build/sounds'
-local fileFormat = Config.NativeAudio and '%.wav' or '%.ogg'
+local fileFormat = '%.wav'
 local sounds = utils.getFilesInDirectory(soundDirectory, fileFormat)
 
-lib.callback.register('ox_doorlock:getSounds', function()
+pr_lib.callback.register('ox_doorlock:getSounds', function()
     return sounds
 end)
+
+local spawnedDynamicDoors = {}
+
+RegisterNetEvent('ox_doorlock:requestDoorReplacement', function(doorId)
+    local src = source
+    local door = doors[doorId]
+    if not door then return end
+    
+    -- If we already spawned a dynamic door for this doorId, check if it still exists
+    if spawnedDynamicDoors[doorId] then
+        local entityOrTable = spawnedDynamicDoors[doorId]
+        if type(entityOrTable) == 'table' then
+            local allExist = true
+            for i = 1, 2 do
+                if not DoesEntityExist(entityOrTable[i]) then
+                    allExist = false
+                end
+            end
+            if allExist then
+                return
+            end
+        else
+            if DoesEntityExist(entityOrTable) then
+                return
+            end
+        end
+    end
+    
+    -- Spawn the object on the server
+    local double = door.doors
+    if double then
+        local newEntities = {}
+        for i = 1, 2 do
+            local subDoor = double[i]
+            local closed = subDoor.closed
+            local coords = closed?.coords or subDoor.coords
+            local heading = closed?.rotation?.z or subDoor.heading
+            local obj = CreateObjectNoOffset(subDoor.model, coords.x, coords.y, coords.z, true, true, false)
+            local attempts = 0
+            while not DoesEntityExist(obj) and attempts < 100 do
+                Wait(10)
+                attempts = attempts + 1
+            end
+            if DoesEntityExist(obj) then
+                if closed?.rotation then
+                    SetEntityRotation(obj, closed.rotation.x, closed.rotation.y, closed.rotation.z, 2, true)
+                elseif subDoor.rotation then
+                    SetEntityRotation(obj, subDoor.rotation.x, subDoor.rotation.y, subDoor.rotation.z, 2, true)
+                else
+                    SetEntityHeading(obj, heading)
+                end
+                FreezeEntityPosition(obj, true)
+                Entity(obj).state.doorId = doorId
+                Entity(obj).state.subDoorIndex = i
+                Entity(obj).state.isDynamicDoor = true
+                newEntities[i] = obj
+            end
+        end
+        spawnedDynamicDoors[doorId] = newEntities
+    else
+        local closed = door.closed
+        local coords = closed?.coords or door.originalCoords or door.coords
+        local heading = closed?.rotation?.z or door.heading
+        local obj = CreateObjectNoOffset(door.model, coords.x, coords.y, coords.z, true, true, false)
+        local attempts = 0
+        while not DoesEntityExist(obj) and attempts < 100 do
+            Wait(10)
+            attempts = attempts + 1
+        end
+        if DoesEntityExist(obj) then
+            if closed?.rotation then
+                SetEntityRotation(obj, closed.rotation.x, closed.rotation.y, closed.rotation.z, 2, true)
+            elseif door.rotation then
+                SetEntityRotation(obj, door.rotation.x, door.rotation.y, door.rotation.z, 2, true)
+            else
+                SetEntityHeading(obj, heading)
+            end
+            FreezeEntityPosition(obj, true)
+            Entity(obj).state.doorId = doorId
+            Entity(obj).state.isDynamicDoor = true
+            spawnedDynamicDoors[doorId] = obj
+        end
+    end
+end)
+
+AddEventHandler('onResourceStop', function(resourceName)
+    if GetCurrentResourceName() ~= resourceName then return end
+    for _, entityOrTable in pairs(spawnedDynamicDoors) do
+        if type(entityOrTable) == 'table' then
+            for _, ent in pairs(entityOrTable) do
+                if DoesEntityExist(ent) then
+                    DeleteEntity(ent)
+                end
+            end
+        else
+            if DoesEntityExist(entityOrTable) then
+                DeleteEntity(entityOrTable)
+            end
+        end
+    end
+end)
+
+
+
+local function normalizeDoorGroup(value)
+    if type(value) ~= 'string' then return nil end
+
+    value = value:match('^%s*(.-)%s*$'):gsub('%s+', ' ')
+    if value == '' then return nil end
+
+    local normalized = value:lower()
+
+    for _, existingDoor in pairs(doors) do
+        local existingGroup = existingDoor.doorGroup
+
+        if type(existingGroup) == 'string' then
+            existingGroup = existingGroup:match('^%s*(.-)%s*$'):gsub('%s+', ' ')
+            if existingGroup:lower() == normalized then return existingGroup end
+        end
+    end
+
+    return value
+end
 
 local function createDoor(id, door, name)
     local double = door.doors
     door.id = id
     door.name = name
+    door.doorGroup = normalizeDoorGroup(door.doorGroup)
 
     if double then
         for i = 1, 2 do
@@ -127,6 +271,20 @@ local function createDoor(id, door, name)
 
             local coords = double[i].coords
             double[i].coords = vector3(coords.x, coords.y, coords.z)
+            if double[i].rotation then
+                local rot = double[i].rotation
+                double[i].rotation = vector3(rot.x, rot.y, rot.z)
+            end
+
+            for _, state in ipairs({ 'closed', 'open' }) do
+                local transform = double[i][state]
+                if transform then
+                    local coords = transform.coords
+                    local rotation = transform.rotation
+                    transform.coords = vector3(coords.x, coords.y, coords.z)
+                    transform.rotation = vector3(rotation.x, rotation.y, rotation.z)
+                end
+            end
         end
 
         if not door.coords then
@@ -137,6 +295,20 @@ local function createDoor(id, door, name)
     end
 
     door.coords = vector3(door.coords.x, door.coords.y, door.coords.z)
+    if door.rotation then
+        local rot = door.rotation
+        door.rotation = vector3(rot.x, rot.y, rot.z)
+    end
+
+    for _, state in ipairs({ 'closed', 'open' }) do
+        local transform = door[state]
+        if transform then
+            local coords = transform.coords
+            local rotation = transform.rotation
+            transform.coords = vector3(coords.x, coords.y, coords.z)
+            transform.rotation = vector3(rotation.x, rotation.y, rotation.z)
+        end
+    end
 
     if not door.state then
         door.state = 1
@@ -153,7 +325,7 @@ local function createDoor(id, door, name)
         end
 
         door.items = items
-        MySQL.update('UPDATE ox_doorlock SET data = ? WHERE id = ?', { encodeData(door), id })
+        Database.update('UPDATE ox_doorlock SET data = ? WHERE id = ?', { encodeData(door), id })
     end
 
     doors[id] = door
@@ -179,7 +351,9 @@ exports('createDoor', function(data)
         data.name = tostring(data.coords)
     end
 
-    local insertId = MySQL.insert.await('INSERT INTO ox_doorlock (name, data) VALUES (?, ?)',
+    data.doorGroup = normalizeDoorGroup(data.doorGroup)
+
+    local insertId = Database.insert('INSERT INTO ox_doorlock (name, data) VALUES (?, ?)',
         { data.name, encodeData(data) })
     local door = createDoor(insertId, data, data.name)
 
@@ -195,7 +369,7 @@ exports('removeDoor', function(id)
         error(('No door found with id %s'):format(id))
     end
 
-    MySQL.update('DELETE FROM ox_doorlock WHERE id = ?', { id })
+    Database.update('DELETE FROM ox_doorlock WHERE id = ?', { id })
     doors[id] = nil
     TriggerClientEvent('ox_doorlock:editDoorlock', -1, id, nil)
 
@@ -259,22 +433,28 @@ local function isAuthorised(playerId, door, lockpick)
             return DoesPlayerHaveItem(player, Config.LockpickItems)
         end
 
-        if door.characters and table.contains(door.characters, GetCharacterId(player)) then
+        local hasRestrictions = (door.groups and next(door.groups)) or (door.characters and next(door.characters)) or (door.items and next(door.items))
+
+        if not hasRestrictions then
             authorised = true
-            goto continue
-        end
+        else
+            if door.characters and pr_lib.table.contains(door.characters, GetCharacterId(player)) then
+                authorised = true
+                goto continue
+            end
 
-        if door.groups then
-            authorised = IsPlayerInGroup(player, door.groups) and true or nil
-        end
+            if door.groups and next(door.groups) then
+                authorised = IsPlayerInGroup(player, door.groups) and true or nil
+            end
 
-        if not authorised and door.items then
-            authorised = DoesPlayerHaveItem(player, door.items) or nil
+            if not authorised and door.items then
+                authorised = DoesPlayerHaveItem(player, door.items) or nil
+            end
         end
     end
 
     if authorised ~= nil and door.passcode then
-        authorised = door.passcode == lib.callback.await('ox_doorlock:inputPassCode', playerId)
+        authorised = door.passcode == pr_lib.callback.await('ox_doorlock:inputPassCode', playerId)
     end
 
     ::continue::
@@ -293,12 +473,12 @@ end
 
 local sql = LoadResourceFile(cache.resource, 'sql/ox_doorlock.sql')
 
-if sql then MySQL.query(sql) end
+if sql then Database.query(sql) end
 
-MySQL.ready(function()
+Database.ready(function()
     while Config.DoorList do Wait(100) end
 
-    local response = MySQL.query.await('SELECT `id`, `name`, `data` FROM `ox_doorlock`')
+    local response = Database.query('SELECT `id`, `name`, `data` FROM `ox_doorlock`')
 
     for i = 1, #response do
         local door = response[i]
@@ -344,8 +524,8 @@ local function setDoorState(id, state, lockpick)
         end
 
         if source then
-            lib.notify(source,
-                { type = 'error', icon = 'lock', description = state == 0 and 'cannot_unlock' or 'cannot_lock' })
+            pr_lib.notify.Notify(source,
+                { type = 'error', icon = 'lock', description = locale(state == 0 and 'cannot_unlock' or 'cannot_lock') })
         end
     end
 
@@ -355,7 +535,7 @@ end
 RegisterNetEvent('ox_doorlock:setState', setDoorState)
 exports('setDoorState', setDoorState)
 
-lib.callback.register('ox_doorlock:getDoors', function()
+pr_lib.callback.register('ox_doorlock:getDoors', function()
     while not isLoaded do Wait(100) end
 
     return doors, sounds
@@ -372,20 +552,22 @@ RegisterNetEvent('ox_doorlock:editDoorlock', function(id, data)
             if not data.name then
                 data.name = tostring(data.coords)
             end
+
+            data.doorGroup = normalizeDoorGroup(data.doorGroup)
         end
 
         if id then
             if data then
-                MySQL.update('UPDATE ox_doorlock SET name = ?, data = ? WHERE id = ?',
+                Database.update('UPDATE ox_doorlock SET name = ?, data = ? WHERE id = ?',
                     { data.name, encodeData(data), id })
             else
-                MySQL.update('DELETE FROM ox_doorlock WHERE id = ?', { id })
+                Database.update('DELETE FROM ox_doorlock WHERE id = ?', { id })
             end
 
             doors[id] = data
             TriggerClientEvent('ox_doorlock:editDoorlock', -1, id, data)
         else
-            local insertId = MySQL.insert.await('INSERT INTO ox_doorlock (name, data) VALUES (?, ?)',
+            local insertId = Database.insert('INSERT INTO ox_doorlock (name, data) VALUES (?, ?)',
                 { data.name, encodeData(data) })
             local door = createDoor(insertId, data, data.name)
 
@@ -413,7 +595,7 @@ RegisterNetEvent('ox_doorlock:teleportToDoor', function(id)
     SetEntityCoords(ped, door.coords.x, door.coords.y, door.coords.z, false, false, false, false)
 end)
 
-lib.addCommand('doorlock', {
+pr_lib.addCommand('doorlock', {
     help = locale('create_modify_lock'),
     params = {
         {
@@ -425,4 +607,25 @@ lib.addCommand('doorlock', {
     restricted = Config.CommandPrincipal
 }, function(source, args)
     TriggerClientEvent('ox_doorlock:triggeredCommand', source, args.closest)
+end)
+
+function GetNameFromDoor(name)
+    local results = Database.query('SELECT * FROM ox_doorlock WHERE name LIKE ?', {'%' .. name .. '%'})
+    if results and #results > 0 then
+        return results
+    end
+    return nil
+end
+
+RegisterNetEvent('ox_doorlock:RemoveDoorlock', function(name)
+    local doorData = GetNameFromDoor(name)
+
+    if doorData and #doorData > 0 then
+        for _, door in ipairs(doorData) do
+            Database.update('DELETE FROM ox_doorlock WHERE id = ?', { door.id })
+            TriggerClientEvent('ox_doorlock:editDoorlock', -1, door.id, nil)
+        end
+    else
+        print('No doors found with the name:', name)
+    end
 end)

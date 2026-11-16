@@ -16,7 +16,7 @@ function IsPlayerInGroup(player, groups)
         return player.getGroup(groups)
     end
 
-    if table.type(groups) == "array" then
+    if DoorTableType(groups) == "array" then
         for i = 1, #groups do
             local groupName = groups[i]
             local groupInfo = player.getGroup(groupName)
