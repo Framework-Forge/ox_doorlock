@@ -1,6 +1,7 @@
 ---@type DoorlockConfig
 ---@diagnostic disable-next-line: missing-fields
 Config = {}
+Config.VersionCheck = true
 
 -- Keep the original locale(...) contract while resolving translations through pr_bridge.
 local doorLocale = pr_lib.locale()

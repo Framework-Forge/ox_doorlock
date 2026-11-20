@@ -6,7 +6,7 @@ game 'gta5'
 
 --[[ Resource Information ]] --
 name 'ox_doorlock'
-version      '1.22.1'
+version      '1.22.3'
 license 'GPL-3.0-or-later'
 author 'Overextended'
 repository 'https://github.com/overextended/ox_doorlock'
@@ -42,3 +42,5 @@ data_file 'AUDIO_SOUNDDATA' 'audio/data/oxdoorlock_sounds.dat'
 dependencies {
     'pr_bridge',
 }
+
+server_script 'server/version.lua'
